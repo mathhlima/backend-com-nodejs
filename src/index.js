@@ -1,11 +1,38 @@
 const express = require('express');
-const { uuid}  = require('uuidv4');
+const { uuid, isUuid}  = require('uuidv4');
 
 const app = express();
 
 app.use(express.json());
 
 const projects = [];
+
+function logRequests(request, response, next){
+    const {method, url} = request;
+
+    const logLabel = `[${method.toUpperCase()}] ${url}`;
+
+    console.log(logLabel);
+
+    return next(); //precisa chamar o next no final middleware se nao, o proximo
+                   //se nao o proximo middleware nao é disparada
+}
+
+function validateProjectId(request, response, next){
+    const {id} = request.params;
+
+    if(!isUuid(id)){
+        return response.status(400).json({error: 'invalid project id'})
+        //se o id for invalido, retorna o response error, e nao next, logo
+        //a requisição será interrompida
+    }
+
+    return next(); //next irá ser disparado, caso a validacao de certo
+                    
+}
+
+app.use(logRequests);
+app.use('/projects/:id', validateProjectId)
 
 app.get('/projects', (request, response) => {
     
@@ -58,7 +85,7 @@ app.delete('/projects/:id', (request, response) => {
         return response.status(400).json({error: 'project not found.'})
     }
 
-    project.splice(projectIndex, 1);
+    projects.splice(projectIndex, 1);
 
     return response.status(204).send();
 
